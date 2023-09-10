@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Game of life</title>
+    <style>
+      .container, .row, body {
+        display: flex;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        flex-direction: column;
+      }
+      .row > span {
+        width: 10px;
+        height: 10px;
+        box-sizing: border-box;
+      }
+      .alive {
+        background-color: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div hx-ext="ws" ws-connect="ws:127.0.0.1:7936">
+      <div id="container"></div>
+    </div>
+    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+  </body>
+</html>
