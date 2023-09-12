@@ -1,0 +1,44 @@
+.container, .row, body {
+	display: flex;
+}
+body.dark {
+	background: #000;
+}
+body.light {
+	background: #fff;
+}
+body {
+	margin: 0;
+	height: 100vh;
+	align-items: center;
+	justify-content: center;
+}
+
+.container {
+	flex-direction: column;
+}
+.dark .container {
+  border: 1px solid #fff;
+}
+.light .container {
+  border: 1px solid #fff;
+}
+
+.row > span {
+	width: 10px;
+	height: 10px;
+	box-sizing: border-box;
+}
+.dark .alive {
+  background-color: #fff;
+}
+.light .alive {
+	background-color: #000;
+}
+
+.actions {
+	position: absolute;
+	top: 0;
+	padding: 2rem;
+}
+
