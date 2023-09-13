@@ -1,8 +1,9 @@
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt, FutureExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 use tokio::time::{sleep, Duration};
 use rand::Rng;
+use std::str;
 
 type Grid = [[u8; 50]; 50];
 
@@ -25,17 +26,106 @@ async fn accept_connection(stream: TcpStream) {
         .await
         .expect("Error during the websocket handshake occurred");
 
+    let mut speed: u8 = 1;
     let mut current = spawn_grid();
 
-    send_grid(&current, &mut ws_stream).await;
-
     loop {
-        sleep(Duration::from_millis(1000)).await;
-
-        current = next_tick(&current);
-        
         send_grid(&current, &mut ws_stream).await;
+        
+        if let Some(next) = ws_stream.next().now_or_never() {
+
+            if let Some(message) = next {
+                match message {
+                    Ok(msg) => {
+                        handle_input(msg, &mut current, &mut speed);
+                    },
+                    Err(err) => {
+                        println!("Unable to receive input: {}", err);
+                    }
+                }   
+            }
+        }
+
+        sleep(Duration::from_millis(1000 / speed as u64)).await;
+        current = next_tick(&current);
+
+
     }
+}
+
+fn handle_input(input: Message, current: &mut Grid, speed: &mut u8) {
+
+    let (command, args) = match parse_command(input) {
+        Some(command) => command,
+        None => {
+            println!("Unable to parse command");
+            return;
+        }
+    };    
+
+    match command.as_str() {
+        "reset" => {
+            *current = spawn_grid();
+        },
+        "speed" => {
+            // todo: sppeed becomes 0 somehow 
+            if let Some(args) = args {
+                
+                if args[0].as_str() == "-" {
+                    *speed += 1;
+                } else if *speed >= 1 {
+                    *speed -= 1;
+                }
+            } else {
+                *speed = 1;
+            }
+        }
+        _ => {
+            println!("Unknown command {}", command);
+        }
+    }
+}
+
+fn parse_command(input: Message) -> Option<(String, Option<Vec<String>>)> {
+
+    if !input.is_text() {
+        return None;
+    }
+
+    let message = input.into_text().unwrap();
+    let nested: Vec<&str> = message.split("{").collect();
+
+    if nested.len() < 3 {
+        return None;
+    }
+
+    for header_line in nested[2].split(",") {
+
+        //println!("header_line: {}", header_line);
+
+
+        let (name, value) = match header_line.split_once(":") {
+            Some((name, value)) => (name.trim_matches('"'), value.trim_matches('"')),
+            _ => { continue; }
+        };
+
+        if name == "HX-Trigger-Name" && !value.is_empty() {
+            
+            match value.split_once(":") {
+                None => {
+                    return Some((value.to_owned(), None))
+                },
+                Some((command, args)) => {
+
+                    let arguments = args.split(",").map(|a| a.to_owned()).collect();
+
+                    return Some((command.to_owned(), Some(arguments)));
+                }
+            }
+        }    
+    }
+
+    None 
 }
 
 async fn send_grid(grid: &Grid, ws_stream: &mut WebSocketStream<TcpStream>) {

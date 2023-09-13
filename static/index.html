@@ -8,9 +8,12 @@
     
     <div hx-ext="ws" ws-connect="ws:127.0.0.1:7936">
 
-      <div class="actions" hx-preserve>
+      <div class="commands" hx-preserve>
         <button id="theme">theme</button>
         <input type="button" name="reset" value="reset" ws-send />
+        <input type="button" name="speed:+" value="speed -" ws-send />
+        <input type="button" name="speed" value="o" ws-send />
+        <input type="button" name="speed:-" value="speed +" ws-send />
       </div>
 
       <div id="container"></div>
