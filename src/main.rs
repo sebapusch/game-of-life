@@ -232,14 +232,20 @@ fn as_html(grid: &Grid) -> String {
     
     let mut html = String::from("<div id=\"container\" class=\"container\" hx-swap-oob=\"true\">\n");
 
-    for row in grid {
+    for (i, row) in grid.iter().enumerate() {
 
         html.push_str("<div class=\"row\">\n");
 
-        for cell in row {
+        for (y, cell) in row.iter().enumerate() {
+            
+            let name = format!("{}:{}", i, y);
 
-            //html.push_str("\t<span></span>");
-            //html.push_str(format!("<input type=\"hidden\" name=\"{}:{}\" value=\"{}\"", ))
+            html.push_str(
+                format("<label for=\"{}\"></label>", name);
+            );
+            html.push_str(
+                format!("<input type=\"hidden\" id="{}" name=\"{}:{}\" value=\"{}\"", i, y, *cell),
+            );
             
             if *cell == 1 {
                 html.push_str("\t<span class=\"alive\"></span>\n");
