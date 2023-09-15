@@ -7,6 +7,12 @@ use std::str;
 
 type Grid = [[u8; 50]; 50];
 
+struct State {
+    speed: u8,
+    pause: bool,
+    grid: Grid,
+}
+
 const ALIVE_SPAWN_CHANCE: u8 = 10;
 
 #[tokio::main]
@@ -26,34 +32,42 @@ async fn accept_connection(stream: TcpStream) {
         .await
         .expect("Error during the websocket handshake occurred");
 
-    let mut speed: u8 = 1;
-    let mut current = spawn_grid();
+    let mut state = State {
+        speed: 1,
+        grid: spawn_grid(),
+        pause: false,
+    };
 
     loop {
-        send_grid(&current, &mut ws_stream).await;
+        send_grid(&state.grid, &mut ws_stream).await;
         
         if let Some(next) = ws_stream.next().now_or_never() {
 
             if let Some(message) = next {
                 match message {
                     Ok(msg) => {
-                        handle_input(msg, &mut current, &mut speed);
+                        handle_input(msg, &mut state);
                     },
                     Err(err) => {
-                        println!("Unable to receive input: {}", err);
+                        println!("Unable to handle input: {}", err);
                     }
                 }   
             }
         }
 
-        sleep(Duration::from_millis(1000 / speed as u64)).await;
-        current = next_tick(&current);
+        sleep(Duration::from_millis(1000 / state.speed as u64)).await;
+
+        if state.pause {
+            continue;
+        }
+
+        state.grid = next_tick(&state.grid);
 
 
     }
 }
 
-fn handle_input(input: Message, current: &mut Grid, speed: &mut u8) {
+fn handle_input(input: Message, state: &mut State) {
 
     let (command, args) = match parse_command(input) {
         Some(command) => command,
@@ -65,12 +79,15 @@ fn handle_input(input: Message, current: &mut Grid, speed: &mut u8) {
 
     match command.as_str() {
         "reset" => {
-            *current = spawn_grid();
+            (*state).grid = spawn_grid();
         },
         "speed" => {
-            // todo: sppeed becomes 0 somehow 
+            // todo: sppeed becomes 0 somehow
+            //
+            let speed = &mut(*state).speed;
+
             if let Some(args) = args {
-                
+
                 if args[0].as_str() == "-" {
                     *speed += 1;
                 } else if *speed >= 1 {
@@ -79,6 +96,12 @@ fn handle_input(input: Message, current: &mut Grid, speed: &mut u8) {
             } else {
                 *speed = 1;
             }
+        }
+        "pause" => {
+            (*state).pause = true;
+        },
+        "play" => {
+            (*state).pause = false;
         }
         _ => {
             println!("Unknown command {}", command);
@@ -214,6 +237,9 @@ fn as_html(grid: &Grid) -> String {
         html.push_str("<div class=\"row\">\n");
 
         for cell in row {
+
+            //html.push_str("\t<span></span>");
+            //html.push_str(format!("<input type=\"hidden\" name=\"{}:{}\" value=\"{}\"", ))
             
             if *cell == 1 {
                 html.push_str("\t<span class=\"alive\"></span>\n");
